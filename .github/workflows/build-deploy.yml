@@ -7,9 +7,8 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-
     permissions:
-      packages: write        # برای پوش کردن به GHCR
+      packages: write
       contents: read
 
     steps:
@@ -23,19 +22,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set short SHA
+        run: echo "SHORT_SHA=${{ github.sha }}" | cut -c1-7 >> $GITHUB_ENV
+
       - name: Build and push Docker image
         run: |
-          IMAGE_NAME="ghcr.io/${{ github.repository }}"
-          IMAGE_TAG="${{ github.sha::7 }}"
-          FULL_IMAGE="$IMAGE_NAME:$IMAGE_TAG"
-
-          echo "Building $FULL_IMAGE"
-          docker build -t "$FULL_IMAGE" .
-
-          echo "Pushing $FULL_IMAGE"
-          docker push "$FULL_IMAGE"
-
-          echo "IMAGE=$FULL_IMAGE" >> $GITHUB_ENV
+          IMAGE="ghcr.io/${{ github.repository }}:${{ env.SHORT_SHA }}"
+          echo "Building $IMAGE"
+          docker build -t "$IMAGE" .
+          echo "Pushing $IMAGE"
+          docker push "$IMAGE"
+          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
 
       - name: Trigger PaaS Webhook
         env:
@@ -58,12 +55,11 @@ jobs:
           # محاسبه امضای HMAC
           SIGNATURE="sha256=$(echo -n "$PAYLOAD" | openssl dgst -sha256 -hmac "$WEBHOOK_SECRET" | awk '{print $2}')"
 
-          echo "Sending webhook to $WEBHOOK_URL"
-          curl -X POST "$WEBHOOK_URL" \
+          echo "Sending webhook..."
+          curl -f -X POST "$WEBHOOK_URL" \
             -H "Content-Type: application/json" \
             -H "X-GitHub-Event: push" \
             -H "X-Hub-Signature-256: $SIGNATURE" \
-            -d "$PAYLOAD" \
-            --fail --show-error
+            -d "$PAYLOAD"
 
           echo "Webhook sent successfully!"
