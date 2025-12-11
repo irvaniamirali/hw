@@ -23,7 +23,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set short SHA
-        run: echo "SHORT_SHA=${{ github.sha }}" | cut -c1-7 >> $GITHUB_ENV
+        run: echo "SHORT_SHA=$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_ENV
 
       - name: Build and push Docker image
         run: |
@@ -39,23 +39,20 @@ jobs:
           WEBHOOK_URL: https://config-spoken-creek-elementary.trycloudflare.com/api/v1/webhooks/github
           WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
         run: |
-          PAYLOAD=$(cat <<EOF
-          {
+          PAYLOAD='{
             "ref": "refs/heads/main",
             "repository": {
               "name": "hw"
             },
             "head_commit": {
-              "id": "${{ github.sha }}"
+              "id": "${GITHUB_SHA}"
             }
-          }
-          EOF
-          )
+          }'
 
-          # محاسبه امضای HMAC
+          # Calculate HMAC signature
           SIGNATURE="sha256=$(echo -n "$PAYLOAD" | openssl dgst -sha256 -hmac "$WEBHOOK_SECRET" | awk '{print $2}')"
 
-          echo "Sending webhook..."
+          echo "Sending webhook to $WEBHOOK_URL"
           curl -f -X POST "$WEBHOOK_URL" \
             -H "Content-Type: application/json" \
             -H "X-GitHub-Event: push" \
