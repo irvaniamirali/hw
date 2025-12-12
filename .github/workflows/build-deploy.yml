@@ -2,7 +2,7 @@ name: Build & Deploy to My PaaS
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   build-and-deploy:
@@ -36,7 +36,7 @@ jobs:
 
       - name: Trigger PaaS Webhook
         env:
-          WEBHOOK_URL: https://config-spoken-creek-elementary.trycloudflare.com/api/v1/webhooks/github
+          WEBHOOK_URL: https://delegation-transparent-control-suggest.trycloudflare.com/api/v1/webhooks/github
           WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
         run: |
           PAYLOAD='{
