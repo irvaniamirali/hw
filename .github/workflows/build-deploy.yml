@@ -2,7 +2,7 @@ name: Build & Deploy to My PaaS
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
 
 jobs:
   build-and-deploy:
@@ -32,27 +32,28 @@ jobs:
           docker build -t "$IMAGE" .
           echo "Pushing $IMAGE"
           docker push "$IMAGE"
-          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
 
       - name: Trigger PaaS Webhook
         env:
           WEBHOOK_URL: https://delegation-transparent-control-suggest.trycloudflare.com/api/v1/webhooks/github
           WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
         run: |
-          PAYLOAD='{
+          PAYLOAD=$(cat <<EOF
+          {
             "ref": "refs/heads/main",
             "repository": {
               "name": "hw"
             },
             "head_commit": {
-              "id": "${GITHUB_SHA}"
+              "id": "$GITHUB_SHA"
             }
-          }'
+          }
+          EOF
+          )
 
-          # Calculate HMAC signature
           SIGNATURE="sha256=$(echo -n "$PAYLOAD" | openssl dgst -sha256 -hmac "$WEBHOOK_SECRET" | awk '{print $2}')"
 
-          echo "Sending webhook to $WEBHOOK_URL"
+          echo "Sending webhook..."
           curl -f -X POST "$WEBHOOK_URL" \
             -H "Content-Type: application/json" \
             -H "X-GitHub-Event: push" \
